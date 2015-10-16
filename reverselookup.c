@@ -37,7 +37,9 @@ int main(int argc, char** argv) {
   struct hostent* h_ent, *reverse_ent;  
   uint32_t ipstart, ipstop;
   int cidr;
-  char* ptr;
+  char* ptr_rec, *a_rec;
+  const char not_found[] = "Not found";
+  const char not_available[] = "N/A";
 
   if (argc < 3) {
     printf("Usage: %s <subnet> <cidr>\n", argv[0]);
@@ -56,21 +58,26 @@ int main(int argc, char** argv) {
 
   while(ipstart++ < ipstop) {
    in.s_addr = htonl(ipstart);
-   ptr = NULL;
 
     h_ent = gethostbyaddr(&in, sizeof(in), AF_INET);
     if (h_ent != NULL) {
       reverse_ent = gethostbyname(h_ent->h_name);
+      ptr_rec = h_ent->h_name;
 
       if (reverse_ent != NULL && reverse_ent->h_length > 0) {
-        ptr =  inet_ntoa(*(struct in_addr*)*reverse_ent->h_addr_list);
+        a_rec =  inet_ntoa(*(struct in_addr*)*reverse_ent->h_addr_list);
+      } else {
+        a_rec = (char*)not_found;
       }
+    } else {
+      a_rec = (char*)not_available;
+      ptr_rec = (char*)not_found;
     }
 
-    printf("%s\tIN A\t%-32s\tReverse PTR: %-15s\tPING: %-5s\n", 
+    printf("%s\tIN PTR\t%-32s -> \tIN A: %-15s\tPING: %-5s\n",
       inet_ntoa(in), 
-      (h_ent != NULL) ? h_ent->h_name : "Not found",
-      (ptr != NULL) ? ptr : "Not found", 
+      ptr_rec,
+      a_rec,
       (ping(inet_ntoa(in)) ? "UP" : "DOWN")
     );
   }
