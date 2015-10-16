@@ -3,7 +3,6 @@
 
 Look up reverse DNS for a IP subnet.
 
-###
 Building and running:
 
 ```
