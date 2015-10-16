@@ -8,7 +8,7 @@
 #include <string.h>
 
 #define IP_MAX 0xFFFFFFFF
-#define PING_CMD "/usr/bin/ping"
+#define PING_CMD "/bin/ping"
 #define PING_FLAGS "-n -W 1 -c 1 -q"
 
 int ping(const char* host) {
@@ -25,7 +25,7 @@ int ping(const char* host) {
   ptr = strstr(res, "packets transmitted");
   if (ptr == NULL) return -1;
   for (ptr != NULL; (*ptr != *res && *ptr != '\n'); ptr--);
-  
+
   ptr++;
   sscanf(ptr, "%i packets transmitted, %i received", &tx, &rx);
 
@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
   char* ptr_rec, *a_rec;
   const char not_found[] = "Not found";
   const char not_available[] = "N/A";
+  int mismatch;
 
   if (argc < 3) {
     printf("Usage: %s <subnet> <cidr>\n", argv[0]);
@@ -57,7 +58,8 @@ int main(int argc, char** argv) {
   ipstop = ipstart + (IP_MAX >> cidr);
 
   while(ipstart++ < ipstop) {
-   in.s_addr = htonl(ipstart);
+    in.s_addr = htonl(ipstart);
+    mismatch = 0;
 
     h_ent = gethostbyaddr(&in, sizeof(in), AF_INET);
     if (h_ent != NULL) {
@@ -66,6 +68,8 @@ int main(int argc, char** argv) {
 
       if (reverse_ent != NULL && reverse_ent->h_length > 0) {
         a_rec =  inet_ntoa(*(struct in_addr*)*reverse_ent->h_addr_list);
+
+        if (strcmp(inet_ntoa(in), a_rec) != 0) mismatch = 1; 
       } else {
         a_rec = (char*)not_found;
       }
@@ -74,14 +78,13 @@ int main(int argc, char** argv) {
       ptr_rec = (char*)not_found;
     }
 
-    printf("%s\tIN PTR\t%-32s -> \tIN A: %-15s\tPING: %-5s\n",
-      inet_ntoa(in), 
-      ptr_rec,
-      a_rec,
-      (ping(inet_ntoa(in)) ? "UP" : "DOWN")
-    );
+    printf("%s\tIN PTR\t%-32s -> \tIN A: %-15s\tPING: %-5s%s\n",
+        inet_ntoa(in), 
+        ptr_rec,
+        a_rec,
+        (ping(inet_ntoa(in)) ? "UP" : "DOWN"),
+        (mismatch) ? "\t(WARNING: A/PTR mismatch)" : ""
+        );
   }
-
-
   return 0;
 }
